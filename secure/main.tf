@@ -6,42 +6,34 @@ resource "aws_kms_key" "s3" {
   enable_key_rotation     = true
 }
 
-resource "aws_kms_alias" "s3" {
-  name          = "alias/secure-bucket-${random_uuid.identifier.result}"
-  target_key_id = aws_kms_key.s3.key_id
+resource "aws_s3_bucket" "this" {
+  bucket = "secure-bucket-${random_uuid.identifier.result}"
 }
 
-module "s3-bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "5.11.0"
+# Policy 2 — KMS encryption at rest (SC-28.1)
+resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
+  bucket = aws_s3_bucket.this.id
 
-  bucket = "secure-bucket-${random_uuid.identifier.result}"
-
-  # SC-28.1 — KMS encryption at rest
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        sse_algorithm     = "aws:kms"
-        kms_master_key_id = aws_kms_key.s3.arn
-      }
-      bucket_key_enabled = true
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3.arn
     }
+    bucket_key_enabled = true
   }
+}
 
-  # Policy 1 — block public access
+# Policy 1 — block public access
+resource "aws_s3_bucket_public_access_block" "this" {
+  bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-
-  # Policy 5 — versioning
-  versioning = {
-    enabled = true
-  }
 }
 
 # Policy 3 — EventBridge notifications
-resource "aws_s3_bucket_notification" "eventbridge" {
-  bucket      = module.s3-bucket.s3_bucket_id
+resource "aws_s3_bucket_notification" "this" {
+  bucket      = aws_s3_bucket.this.id
   eventbridge = true
 }
