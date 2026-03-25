@@ -1,8 +1,10 @@
+resource "random_uuid" "identifier" {}
+
 module "s3-bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "5.11.0"
 
-  bucket = "secure-bucket-example"
+  bucket = "secure-bucket-${random_uuid.identifier.result}"
 
   server_side_encryption_configuration = {
     rule = {
