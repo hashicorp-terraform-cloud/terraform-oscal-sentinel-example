@@ -28,17 +28,20 @@ module "s3-bucket" {
     }
   }
 
-  # Policy 1 — s3-block-public-access-bucket-level
+  # Policy 1 — block public access
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 
-  # Policy 3 — s3-bucket-should-have-event-notifications-enabled
-  eventbridge = true
-
-  # Policy 5 — versioning (policy has a bug but good practice)
+  # Policy 5 — versioning
   versioning = {
     enabled = true
   }
+}
+
+# Policy 3 — EventBridge notifications
+resource "aws_s3_bucket_notification" "eventbridge" {
+  bucket      = module.s3-bucket.s3_bucket_id
+  eventbridge = true
 }
